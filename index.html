@@ -13,6 +13,11 @@
   #mute { position: fixed; right: 16px; top: 14px; width: 44px; height: 44px;
     border: none; border-radius: 50%; background: rgba(255,253,246,.9); font-size: 20px;
     cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,.18); }
+  #jumpBtn { position: fixed; right: 18px; bottom: 24px; width: 76px; height: 76px;
+    border: none; border-radius: 50%; background: rgba(255,253,246,.92); font-size: 15px;
+    font-weight: 700; color: #2d3436; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.28);
+    display: none; }
+  @media (pointer: coarse) { #jumpBtn { display: block; } }
   .overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
     background: rgba(16,42,66,.38); backdrop-filter: blur(3px); }
   .panel { background: #fffdf6; border-radius: 18px; padding: 26px 34px; text-align: center;
@@ -33,12 +38,13 @@
 
 <div id="hud">📍 <span id="dist">0</span> m　🐟 <span id="fish">0</span>　💨 <span id="spd">0</span> km/h</div>
 <button id="mute" title="声音开关">🔊</button>
+<button id="jumpBtn" title="跳跃">⬆️<br>跳跃</button>
 
 <div id="ready" class="overlay">
   <div class="panel">
     <h1>🚲 鹈鹕骑自行车 3D</h1>
-    <p>沿着公路一直向前骑！躲开<b>石头、路障、木桶</b>，<br>吃到<b>小鱼</b>每条加 10 分，骑得越远速度越快。</p>
-    <p><kbd>←</kbd> <kbd>→</kbd> 或 <kbd>A</kbd> <kbd>D</kbd> 控制方向<br>（手机/触屏：按住屏幕左半边或右半边）</p>
+    <p>沿着公路一直向前骑！躲开<b>石头、路障、木桶</b>（速度越骑越快，障碍越来越密），<br>吃到<b>小鱼</b>每条加 10 分。按 <kbd>空格</kbd> 可以<b>跳过</b>障碍！</p>
+    <p><kbd>←</kbd> <kbd>→</kbd> 或 <kbd>A</kbd> <kbd>D</kbd> 控制方向　<kbd>空格</kbd> / <kbd>↑</kbd> 跳跃<br>（触屏：按住屏幕左右半边，点右下角按钮跳跃）</p>
     <p>最佳纪录：<span class="best" id="best">0</span> 分</p>
     <button id="start" class="btn">开始骑行</button>
   </div>
@@ -423,6 +429,7 @@ function spawnObstacle(kind, x, z) {
     m.scale.setScalar(s);
     g.add(m);
     g.userData.r = 0.52 * s;
+    g.userData.h = 0.35 + 0.5 * s;
   } else if (kind === "cone") {
     const m = new THREE.Mesh(geos.cone, M.cone);
     m.position.y = 0.41;
@@ -431,6 +438,7 @@ function spawnObstacle(kind, x, z) {
     b.position.y = 0.03;
     g.add(b);
     g.userData.r = 0.40;
+    g.userData.h = 0.72;
   } else {
     const m = new THREE.Mesh(geos.barrel, M.barrel);
     m.position.y = 0.43;
@@ -439,6 +447,7 @@ function spawnObstacle(kind, x, z) {
     band.position.y = 0.43;
     g.add(band);
     g.userData.r = 0.52;
+    g.userData.h = 0.85;
   }
   g.add(blobShadow(g.userData.r + 0.08));
   g.position.set(x, 0, z);
@@ -473,16 +482,24 @@ function difficulty() {
 function spawnPattern(z) {
   const diff = difficulty();
   const r = Math.random();
-  if (r < 0.32 - 0.14 * diff) {
+  const pFish = 0.26 - 0.12 * diff;
+  const pDouble = 0.16 + 0.28 * diff;
+  const pTriple = 0.10 + 0.18 * diff;
+  const kinds = ["rock", "cone", "barrel"];
+  if (r < pFish) {
     const x = -3.4 + Math.random() * 6.8;
     for (let i = 0; i < 4; i++) spawnFish(x, z - i * 2.6);
-  } else if (r < 0.32 - 0.14 * diff + 0.14 + 0.24 * diff) {
+  } else if (r < pFish + pDouble) {
     const gapX = -2.4 + Math.random() * 4.8;
-    const kinds = ["rock", "cone", "barrel"];
     spawnObstacle(kinds[Math.floor(Math.random() * 3)], Math.max(-3.8, gapX - 2.5), z);
     spawnObstacle(kinds[Math.floor(Math.random() * 3)], Math.min(3.8, gapX + 2.5), z);
+  } else if (r < pFish + pDouble + pTriple) {
+    // 三连障碍：留出两个窄缝，可以左右穿也可以跳
+    [-3.1, 0, 3.1].forEach((x) => {
+      spawnObstacle(kinds[Math.floor(Math.random() * 3)],
+        Math.max(-3.9, Math.min(3.9, x + (Math.random() * 0.8 - 0.4))), z);
+    });
   } else {
-    const kinds = ["rock", "cone", "barrel"];
     spawnObstacle(kinds[Math.floor(Math.random() * 3)], -3.7 + Math.random() * 7.4, z);
   }
 }
@@ -510,6 +527,7 @@ const input = { left: false, right: false };
 window.addEventListener("keydown", (e) => {
   if (["ArrowLeft", "a", "A"].indexOf(e.key) >= 0) { input.left = true; e.preventDefault(); }
   if (["ArrowRight", "d", "D"].indexOf(e.key) >= 0) { input.right = true; e.preventDefault(); }
+  if ([" ", "ArrowUp", "w", "W"].indexOf(e.key) >= 0) { tryJump(); e.preventDefault(); }
 });
 window.addEventListener("keyup", (e) => {
   if (["ArrowLeft", "a", "A"].indexOf(e.key) >= 0) input.left = false;
@@ -522,8 +540,20 @@ window.addEventListener("pointerdown", (e) => {
 window.addEventListener("pointerup", () => { input.left = input.right = false; });
 window.addEventListener("pointercancel", () => { input.left = input.right = false; });
 
+// ============ 跳跃 ============
+const JUMP_V0 = 6.0, JUMP_G = 14;
+let py = 0, pyv = 0, grounded = true;
+function tryJump() {
+  if (state === "play" && grounded) {
+    grounded = false;
+    pyv = JUMP_V0;
+    beep(320, 0.16, "sine", 0.1, 660);
+  }
+}
+document.getElementById("jumpBtn").addEventListener("click", tryJump);
+
 // ============ 游戏状态 ============
-const START_SPEED = 9, MAX_SPEED = 24, ACCEL = 0.35;
+const START_SPEED = 11, MAX_SPEED = 30, ACCEL = 0.5;
 let state = "ready";          // ready | play | over
 let v = 0, dist = 0, fishCount = 0;
 let px = 0, pvx = 0;          // 玩家横向位置与速度
@@ -562,7 +592,7 @@ document.getElementById("restart").addEventListener("click", () => {
   for (const f of fishes) scene.remove(f);
   fishes.length = 0;
   dist = 0; fishCount = 0; nextSpawn = 20;
-  px = 0; pvx = 0; crashT = 0; overShown = false;
+  px = 0; pvx = 0; py = 0; pyv = 0; grounded = true; crashT = 0; overShown = false;
   player.g.rotation.set(0, 0, 0);
   player.g.position.set(0, 0, 0);
   el.over.style.display = "none";
@@ -613,6 +643,13 @@ function loop() {
   }
   px = Math.max(-4.1, Math.min(4.1, px + pvx * dt));
 
+  // 跳跃物理
+  if (!grounded) {
+    pyv -= JUMP_G * dt;
+    py += pyv * dt;
+    if (py <= 0) { py = 0; pyv = 0; grounded = true; beep(180, 0.08, "sine", 0.07); }
+  }
+
   // 玩家姿态
   player.g.position.x = px;
   player.g.rotation.z = -pvx * 0.055;
@@ -628,7 +665,7 @@ function loop() {
     }
   } else {
     player.g.rotation.x = 0;
-    player.g.position.y = 0;
+    player.g.position.y = py;
   }
 
   // 车轮 / 曲柄 / 腿
@@ -639,6 +676,7 @@ function loop() {
   poseLegs(crankRot);
   player.bird.position.y = Math.abs(Math.sin(crankRot)) * 0.02;
   player.shadow.position.set(px, 0.02, 0);
+  player.shadow.scale.setScalar(1 - Math.min(0.45, py * 0.4));
 
   // 路面滚动
   roadTex.offset.y += dz / ROAD_SEG;
@@ -648,7 +686,8 @@ function loop() {
     const o = obstacles[i];
     o.position.z += dz;
     if (o.position.z > 14) { scene.remove(o); obstacles.splice(i, 1); continue; }
-    if (state === "play" && Math.abs(o.position.z) < o.userData.r + 0.5 &&
+    if (state === "play" && py < (o.userData.h || 0.8) &&
+        Math.abs(o.position.z) < o.userData.r + 0.5 &&
         Math.abs(o.position.x - px) < o.userData.r + 0.38) {
       crash();
     }
@@ -679,7 +718,7 @@ function loop() {
     nextSpawn -= dz;
     if (nextSpawn <= 0) {
       spawnPattern(-150);
-      nextSpawn = 15 + Math.random() * 10 - difficulty() * 6;
+      nextSpawn = 14 + Math.random() * 8 - difficulty() * 5;
     }
     dist += dz;
     el.dist.textContent = Math.floor(dist);
@@ -733,6 +772,10 @@ window.__gameState = function (patch) {
     if (typeof patch.fish === "number") fishCount = patch.fish;
     if (typeof patch.nextSpawn === "number") nextSpawn = patch.nextSpawn;
     if (typeof patch.crashT === "number") crashT = patch.crashT;
+    if (typeof patch.py === "number") py = patch.py;
+    if (typeof patch.pyv === "number") pyv = patch.pyv;
+    if (typeof patch.grounded === "boolean") grounded = patch.grounded;
+    if (patch.jump) tryJump();
     if (patch.input) { input.left = !!patch.input.left; input.right = !!patch.input.right; }
     if (patch.spawn === "fish") spawnFish(patch.spawnX || 0, patch.spawnZ === undefined ? -5 : patch.spawnZ);
     if (patch.spawn === "rock") spawnObstacle("rock", patch.spawnX || 0, patch.spawnZ === undefined ? -5 : patch.spawnZ);
@@ -745,7 +788,7 @@ window.__gameState = function (patch) {
     }
   }
   return {
-    state: state, v: v, dist: dist, px: px, pvx: pvx, fish: fishCount,
+    state: state, v: v, dist: dist, px: px, pvx: pvx, py: py, grounded: grounded, fish: fishCount,
     nextSpawn: nextSpawn,
     obstacles: obstacles.map(function (o) { return { x: o.position.x, z: o.position.z, r: o.userData.r }; }),
     fishes: fishes.map(function (f) { return { x: f.position.x, z: f.position.z }; }),

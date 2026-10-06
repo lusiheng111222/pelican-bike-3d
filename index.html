@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-<title>奶娃骑自行车 3D · 小游戏</title>
+<title>奶龙骑自行车 3D · 小游戏</title>
 <style>
   html, body { margin: 0; height: 100%; overflow: hidden; background: #8fd3ff;
     font-family: system-ui, "Microsoft YaHei", sans-serif; }
@@ -43,7 +43,7 @@
 
 <div id="ready" class="overlay">
   <div class="panel">
-    <h1>👶 奶娃骑自行车 3D</h1>
+    <h1>🐲 奶龙骑自行车 3D</h1>
     <p>沿着公路一直向前骑！躲开<b>石头、路障、木桶</b>（速度越骑越快，障碍越来越密），<br>吃到<b>小鱼</b>每条加 10 分。按 <kbd>空格</kbd> 可以<b>跳过</b>障碍！</p>
     <p><kbd>←</kbd> <kbd>→</kbd> 或 <kbd>A</kbd> <kbd>D</kbd> 控制方向　<kbd>空格</kbd> / <kbd>↑</kbd> 跳跃<br>（触屏：按住屏幕左右半边，点右下角按钮跳跃）</p>
     <p>最佳纪录：<span class="best" id="best">0</span> 分</p>
@@ -136,6 +136,10 @@ const M = {
   button:new THREE.MeshLambertMaterial({ color: 0xffd32a }),
   ringM: new THREE.MeshLambertMaterial({ color: 0xf5f6fa }),
   mouth: new THREE.MeshLambertMaterial({ color: 0x9c3d2e }),
+  nailong:  new THREE.MeshLambertMaterial({ color: 0xffd93b }),
+  nailongD: new THREE.MeshLambertMaterial({ color: 0xecc22e }),
+  belly:    new THREE.MeshLambertMaterial({ color: 0xfff3d6 }),
+  horn:     new THREE.MeshLambertMaterial({ color: 0xf0a830 }),
 };
 
 // ============ 地面与公路 ============
@@ -201,7 +205,7 @@ function kneePos(hy, hz, fy, fz, L1, L2) {
   return k1.z < k2.z ? k1 : k2;
 }
 
-// ============ 奶娃 + 自行车 ============
+// ============ 奶龙 + 自行车 ============
 const CRANK_R = 0.18, CRANK_X = 0.10, CRANK_GEAR = 1.55;
 const BB = { y: 0.26, z: 0.12 };
 const player = {};
@@ -284,82 +288,76 @@ const player = {};
     front.add(grip);
   });
 
-  // ===== 奶娃 =====
+  // ===== 奶龙（官方造型：金黄圆身、白肚皮、小豆芽角、圆尾巴） =====
   const bird = new THREE.Group();
   g.add(bird);
 
-  // 白衬衫身体 + 蓝背带裤（裤壳做大包住下半身，背带才露得出来）
-  const body = new THREE.Mesh(new THREE.SphereGeometry(0.30, 20, 16), M.shirt);
-  body.scale.set(1.0, 0.95, 1.05);
+  // 金黄圆身子
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.30, 20, 16), M.nailong);
+  body.scale.set(1.05, 0.95, 1.05);
   body.position.set(0, 1.14, 0.28);
   bird.add(body);
-  const bib = new THREE.Mesh(new THREE.SphereGeometry(0.30, 18, 14), M.denim);
-  bib.scale.set(1.05, 0.85, 1.08);
-  bib.position.set(0, 0.99, 0.29);
-  bird.add(bib);
-  const collar = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 10), M.ringM);
-  collar.scale.set(1.05, 0.5, 0.9);
-  collar.position.set(0, 1.40, 0.04);
-  bird.add(collar);
-  [-1, 1].forEach((s) => {
-    const strapB = makeTube(0.035, M.denimD);
-    setTube(strapB, new THREE.Vector3(s * 0.11, 1.35, 0.54), new THREE.Vector3(s * 0.095, 0.98, 0.615));
-    bird.add(strapB);
-    const btn = new THREE.Mesh(new THREE.SphereGeometry(0.026, 8, 8), M.button);
-    btn.position.set(s * 0.125, 1.18, 0.47);
-    bird.add(btn);
-  });
 
-  // 粗短脖 + 大脑袋
-  const neck = makeTube(0.11, M.skin);
-  setTube(neck, new THREE.Vector3(0, 1.40, 0.04), new THREE.Vector3(0, 1.62, -0.08));
+  // 白白的大肚皮（微微鼓出）
+  const belly = new THREE.Mesh(new THREE.SphereGeometry(0.27, 18, 14), M.belly);
+  belly.scale.set(1.0, 0.95, 0.95);
+  belly.position.set(0, 1.04, 0.37);
+  bird.add(belly);
+
+  // 粗短脖 + 超大脑袋（奶龙头占半个身子）
+  const neck = makeTube(0.12, M.nailong);
+  setTube(neck, new THREE.Vector3(0, 1.40, 0.04), new THREE.Vector3(0, 1.60, -0.08));
   bird.add(neck);
-  const headM = new THREE.Mesh(new THREE.SphereGeometry(0.21, 20, 16), M.skin);
-  headM.position.set(0, 1.70, -0.10);
+  const headM = new THREE.Mesh(new THREE.SphereGeometry(0.24, 20, 16), M.nailong);
+  headM.position.set(0, 1.74, -0.10);
   bird.add(headM);
 
-  // 碗盖头 + 一根呆毛
-  const hair = new THREE.Mesh(new THREE.SphereGeometry(0.215, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2), M.hair);
-  hair.scale.set(1, 0.72, 1);
-  hair.position.set(0, 1.755, -0.09);
-  bird.add(hair);
-  const curl = new THREE.Mesh(new THREE.ConeGeometry(0.022, 0.10, 8), M.hair);
-  curl.position.set(0.03, 1.955, -0.11);
-  curl.rotation.z = -0.45;
-  bird.add(curl);
-  const curlTip = new THREE.Mesh(new THREE.SphereGeometry(0.022, 8, 8), M.hair);
-  curlTip.position.set(0.052, 2.005, -0.11);
-  bird.add(curlTip);
-
-  // 大眼睛（带高光）、腮红、奶嘴
+  // 两根短短的小豆芽龙角
   [-1, 1].forEach((s) => {
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.034, 10, 10), M.dark);
-    eye.position.set(s * 0.091, 1.75, -0.283);
+    const stem = makeTube(0.034, M.horn);
+    setTube(stem, new THREE.Vector3(s * 0.085, 1.95, -0.12), new THREE.Vector3(s * 0.10, 2.055, -0.125));
+    bird.add(stem);
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.042, 10, 8), M.horn);
+    tip.position.set(s * 0.104, 2.07, -0.125);
+    bird.add(tip);
+  });
+
+  // 大眼睛（带高光）、微笑、腮红
+  [-1, 1].forEach((s) => {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.048, 12, 10), M.dark);
+    eye.position.set(s * 0.10, 1.79, -0.30);
     bird.add(eye);
-    const hl = new THREE.Mesh(new THREE.SphereGeometry(0.012, 6, 6), M.ringM);
-    hl.position.set(s * 0.082, 1.762, -0.306);
+    const hl = new THREE.Mesh(new THREE.SphereGeometry(0.016, 6, 6), M.ringM);
+    hl.position.set(s * 0.088, 1.803, -0.328);
     bird.add(hl);
-    const cheek = new THREE.Mesh(new THREE.SphereGeometry(0.048, 10, 8), M.blush);
-    cheek.scale.set(1, 0.72, 0.4);
-    cheek.position.set(s * 0.146, 1.655, -0.244);
+    const cheek = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 8), M.blush);
+    cheek.scale.set(1, 0.72, 0.3);
+    cheek.position.set(s * 0.155, 1.68, -0.27);
     cheek.rotation.y = s * 0.85;
     bird.add(cheek);
   });
-  const nip = new THREE.Mesh(new THREE.SphereGeometry(0.026, 10, 8), M.button);
-  nip.position.set(0, 1.615, -0.297);
-  bird.add(nip);
-  const paciRing = new THREE.Mesh(new THREE.TorusGeometry(0.030, 0.009, 8, 16), M.ringM);
-  paciRing.position.set(0, 1.615, -0.318);
-  bird.add(paciRing);
+  const mouthM = new THREE.Mesh(new THREE.SphereGeometry(0.055, 10, 8), M.mouth);
+  mouthM.scale.set(1.6, 0.55, 0.4);
+  mouthM.position.set(0, 1.635, -0.325);
+  bird.add(mouthM);
 
-  // 胖胳膊扶车把
+  // 圆圆的小尾巴（背影视角的关键特征）
+  const tailC = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.30, 10), M.nailong);
+  tailC.position.set(0, 1.26, 0.64);
+  tailC.rotation.x = 1.15;
+  bird.add(tailC);
+  const tailTip = new THREE.Mesh(new THREE.SphereGeometry(0.078, 10, 8), M.nailong);
+  tailTip.position.set(0, 1.33, 0.78);
+  bird.add(tailTip);
+
+  // 短粗胳膊扶车把
   [-1, 1].forEach((s) => {
     const sh = new THREE.Vector3(s * 0.20, 1.30, 0.18);
     const grip = new THREE.Vector3(s * 0.24, 1.02, -0.50);
-    const arm = makeTube(0.055, M.skin);
+    const arm = makeTube(0.075, M.nailong);
     setTube(arm, sh, grip);
     bird.add(arm);
-    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8), M.skin);
+    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.075, 10, 8), M.nailong);
     hand.position.copy(grip);
     bird.add(hand);
   });
@@ -368,9 +366,9 @@ const player = {};
   const legs = [];
   [-1, 1].forEach((s) => {
     const hip = new THREE.Vector3(s * 0.09, 1.00, 0.32);
-    const thigh = makeTube(0.042, s > 0 ? M.skin : M.skinD);
-    const shin = makeTube(0.034, s > 0 ? M.skin : M.skinD);
-    const foot = new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.035, 0.18), M.shoe);
+    const thigh = makeTube(0.05, s > 0 ? M.nailong : M.nailongD);
+    const shin = makeTube(0.042, s > 0 ? M.nailong : M.nailongD);
+    const foot = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.04, 0.19), M.nailongD);
     bird.add(thigh); bird.add(shin); bird.add(foot);
     legs.push({ s, hip, thigh, shin, foot, L1: 0.50, L2: 0.50 });
   });
